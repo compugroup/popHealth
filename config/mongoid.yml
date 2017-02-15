@@ -16,3 +16,9 @@ production:
       database: pophealth-production
       hosts:
         - localhost:27017
+    options:
+      #raise_not_found_error has to be not here but see below
+  options:
+    # Raise an error when performing a #find and the document is not found.
+    # (default: true)
+    raise_not_found_error: false
