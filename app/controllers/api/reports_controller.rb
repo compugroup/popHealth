@@ -9,6 +9,7 @@ module Api
         quality measure calculations.
       RCDESC
     end
+    include LogsHelper
     before_filter :authenticate_user!
     skip_authorization_check
 
@@ -24,6 +25,7 @@ module Api
       the values from the user's dashboard will be used.
     CDESC
     def cat3
+      log_api_call LogAction::EXPORT, "QRDA Category 3 report"
       measure_ids = params[:measure_ids] ||current_user.preferences["selected_measure_ids"]
       filter = measure_ids=="all" ? {}  : {:hqmf_id.in =>measure_ids}
       exporter =  HealthDataStandards::Export::Cat3.new
@@ -56,6 +58,7 @@ module Api
       This action will generate an Excel spreadsheet of relevant QRDA Category I Document based on the category of patients selected. 
     CDESC
     def patients
+      log_api_call LogAction::EXPORT, "Patients report", true
       type = params[:patient_type]   
       qr = QME::QualityReport.where(:effective_date => params[:effective_date].to_i, :measure_id => params[:id], :sub_id => params[:sub_id], "filters.providers" => params[:provider_id])
       
@@ -121,6 +124,7 @@ module Api
       This action will generate a Excel spreadsheet report for a team of providers for a given measure.
     CDESC
     def team_report
+      log_api_call LogAction::EXPORT, "Team report"
       measure_id = params[:measure_id]
       sub_id = params[:sub_id]
       team = Team.find(params[:team_id])
@@ -187,6 +191,7 @@ module Api
       This action will generate an Excel spreadsheet document containing a list of measure calculations for the current user's selected measures.
     CDESC
     def measures_spreadsheet
+      log_api_call LogAction::EXPORT, "Measure spreadsheet report"
       book = Spreadsheet::Workbook.new
       sheet = book.create_worksheet
       format = Spreadsheet::Format.new :weight => :bold
@@ -260,6 +265,7 @@ module Api
       the value from the user's dashboard will be used.
     CDESC
     def cat1
+      log_api_call LogAction::EXPORT, "QRDA Category 1 report", true
       exporter = HealthDataStandards::Export::Cat1.new
       patient = Record.find(params[:id])
       authorize! :read, patient

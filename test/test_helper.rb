@@ -27,7 +27,7 @@ class ActiveSupport::TestCase
   def load_code_sets
     MONGO_DB['races'].drop() if MONGO_DB['races']
     MONGO_DB['ethnicities'].drop() if MONGO_DB['ethnicities']
-   JSON.parse(File.read(File.join(Rails.root, 'test', 'fixtures', 'code_sets', 'races.json'))).each do |document|
+    JSON.parse(File.read(File.join(Rails.root, 'test', 'fixtures', 'code_sets', 'races.json'))).each do |document|
       MONGO_DB['races'].insert(document)
     end
     JSON.parse(File.read(File.join(Rails.root, 'test', 'fixtures', 'code_sets', 'ethnicities.json'))).each do |document|

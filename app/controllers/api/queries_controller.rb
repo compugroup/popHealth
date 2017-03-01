@@ -10,6 +10,7 @@ module Api
       QCDESC
     end
     include PaginationHelper
+    include LogsHelper
     skip_authorization_check
     before_filter :authenticate_user!
     before_filter :set_pagination_params, :only=>[:patient_results, :patients]
@@ -19,6 +20,7 @@ module Api
       filter["hqmf_id"] = {"$in" => params["measure_ids"]} if params["measure_ids"]
       providers = collect_provider_id
       filter["filters.providers"] = {"$in" => providers} if providers
+      log_api_call LogAction::VIEW, "View all queries"
       render json: QME::QualityReport.where(filter)
     end
 
@@ -42,6 +44,7 @@ module Api
         end
       end
 
+      log_api_call LogAction::VIEW, "View quality measure calculation"
       authorize! :read, @qr
       render json: @qr
     end
@@ -100,6 +103,7 @@ module Api
         end
       end
 
+      log_api_call LogAction::ADD, "Create a clinical quality calculation"
       render json: qr
     end
 
@@ -109,6 +113,7 @@ module Api
       qr = QME::QualityReport.find(params[:id])
       authorize! :delete, qr
       qr.destroy
+      log_api_call LogAction::DELETE, "Remove clinical quality calculation"
       render :status=> 204, :text=>""
     end
 
@@ -119,6 +124,7 @@ module Api
       authorize! :recalculate , qr
       qr.calculate({"oid_dictionary" =>OidHelper.generate_oid_dictionary(qr.measure_id),
                      'recalculate' =>true}, true)
+      log_api_call LogAction::UPDATE, "Force a clinical quality calculation"
       render json: qr
     end
 
@@ -144,6 +150,7 @@ module Api
       authorize! :read, qr
       # this returns a criteria object so we can filter it additionally as needed
       results = qr.patient_results
+      log_api_call LogAction::VIEW, "Get patient results for measure calculation", true
       render json: paginate(patient_results_api_query_url(qr),results.where(build_patient_filter).only('_id', 'value.medical_record_id', 'value.first', 'value.last', 'value.birthdate', 'value.gender', 'value.patient_id'))
     end
 
@@ -153,6 +160,7 @@ module Api
       # this returns a criteria object so we can filter it additionally as needed
       results = qr.patient_results
       ids = paginate(patients_api_query_url(qr),results.where(build_patient_filter).order_by([:last.asc, :first.asc])).collect{|r| r["value.medical_record_id"]}
+      log_api_call LogAction::VIEW, "Get patients for measure calculation", true
       render :json=> Record.where({:medical_record_number.in => ids})
     end
 

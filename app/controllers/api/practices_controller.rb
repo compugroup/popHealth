@@ -6,6 +6,7 @@ module Api
       formats ['json']
       description "This resource allows for the management of practices/organizations in the popHealth application."
     end
+    include LogsHelper
     before_filter :authenticate_user!
     before_filter :validate_authorization!
     skip_before_action :verify_authenticity_token
@@ -13,6 +14,7 @@ module Api
     api :GET, "/practices/:id", "Get the practice information"
     formats ['json']
     def show
+      log_api_call LogAction::VIEW, "View practice"
       practice = Practice.find(params[:id])
       render :json => practice.as_json
     end
@@ -20,6 +22,7 @@ module Api
     api :GET, "/practices", "Get all practice information"
     formats ['json']
     def index
+      log_api_call LogAction::VIEW, "View all practices"
       practices = Practice.all
       render :json => practices.as_json
     end  
@@ -46,7 +49,9 @@ module Api
           user.save
         end
         @practice.save!
+        log_api_call LogAction::ADD, "Created practice"
       else
+        log_api_call LogAction::ADD, "Failed to create practice, with errors #{get_errors_for_log(@practice)}"
         @practice = nil
       end
       render :json => @practice

@@ -1,53 +1,86 @@
 <% content_for :head do -%>
   <script type="text/javascript">
   var popHealth = popHealth || {};
+
+  function appendToQueryString(param, val, url) {
+    var queryString = url.replace("?", "");
+    var parameterListRaw = queryString == "" ? [] : queryString.split("&");
+    var parameterList = {};
+    for (var i = 0; i < parameterListRaw.length; i++) {
+        var parameter = parameterListRaw[i].split("=");
+        parameterList[parameter[0]] = parameter[1];
+    }
+    parameterList[param] = val;
+
+    var newQueryString = "?";
+    for (var item in parameterList) {
+        if (parameterList.hasOwnProperty(item)) {
+            newQueryString += item + "=" + parameterList[item] + "&";
+        }
+    }
+    newQueryString = newQueryString.replace(/&$/, "");
+    return newQueryString;
+  }
+
+  popHealth.resetFilter = function() {
+    window.location.href = location.origin + location.pathname;
+  }
   
   popHealth.rangeChanged = function () {
-    var query = $.query
+    var url = window.location.search;
     if ($('#logStartDate').val().length > 0) {
-      query = query.set('log_start_date', $('#logStartDate').val());
+      url = appendToQueryString('log_start_date', $('#logStartDate').val(), url);
     }
     if ($('#logEndDate').val().length > 0) {
-      query = query.set('log_end_date', $('#logEndDate').val());
+      url = appendToQueryString('log_end_date', $('#logEndDate').val(), url);
     }
-    window.location.search = query.toString();
+    window.location.href = location.origin + location.pathname + url;
   };
-  
-  $(document).ready(function() {
-    $('#logStartDate, #logEndDate').calendricalDateRange({usa: true, changed: popHealth.rangeChanged});
-  });
   </script>
 <% end -%>
 
-<div id="pageContent">
+<div id="logsContainer">
     <h3>Logs</h3>
     <form class="form-inline">
       <fieldset>
         <legend>Date Range</legend>
-              <input type="text" id="logStartDate" size="6" value="<%= params[:log_start_date] %>" placeholder="Start Date" />
-      <input type="text" id="logEndDate" size="6" value="<%= params[:log_end_date] %>" placeholder="End Date"/>
+        <input type="text" id="logStartDate" size="12" value="<%= params[:log_start_date] %>" placeholder="Start Date" />
+        <input type="text" id="logEndDate" size="12" value="<%= params[:log_end_date] %>" placeholder="End Date"/>
+        <input type="button" id="resetFilter" size="6" value="Reset" />
       </fieldset>
-
     </form>
 
     <table id="patientTable" class="table table-hover">
       <tr>
-        <th><%= link_to 'Timestamp', time_range_params_plus(:sort => 'created_at', :order => 'desc') %></th>
-        <th><%= link_to 'Username', time_range_params_plus(:sort => 'username', :order => 'desc') %></th>
-        <th><%= link_to 'Event', time_range_params_plus(:sort => 'event', :order => 'desc') %></th>
-        <th><%= link_to 'File SHA1 Hash', time_range_params_plus(:sort => 'checksum', :order => 'desc') %></th>
-        <th><%= link_to 'Patient Id', time_range_params_plus(:sort => 'medical_record_number', :order => 'desc') %></th>
+        <th><%= link_to 'Timestamp', time_range_params_plus(:sort => 'created_at') %></th>
+        <th><%= link_to 'Username', time_range_params_plus(:sort => 'username') %></th>
+        <th><%= link_to 'Event', time_range_params_plus(:sort => 'event') %></th>
+        <th><%= link_to 'Description', time_range_params_plus(:sort => 'description') %></th>
+        <th><%= link_to 'Patient Id', time_range_params_plus(:sort => 'medical_record_number') %></th>
+        <% if current_user.admin? %>
+          <th><%= link_to 'Affected User', time_range_params_plus(:sort => 'affected_user') %></th>
+        <% end %>
+        <th><%= link_to 'File SHA1 Hash', time_range_params_plus(:sort => 'checksum') %></th>
       </tr>
       <% @logs.each do |log| -%>
       <tr>
         <td><%= log.created_at %></td>
         <td><%= log.username %></td>
         <td><%= log.event %></td>
-        <td><%= log.checksum %></td>
+        <td><%= log.description %></td>
         <td><%= log.medical_record_number %></td>
+        <td><%= log.affected_user %></td>
+        <td><%= log.checksum %></td>
       </tr>
       <% end -%>
     </table>
 
     <%= will_paginate @logs %>
 </div> <!-- pageContent -->
+
+<script>
+  $(document).ready(function() {
+    $('#logStartDate, #logEndDate').datepicker({orientation: "top left", format: "m/d/yyyy"}).on('changeDate', popHealth.rangeChanged);
+    $('#resetFilter').on('click', popHealth.resetFilter);
+  });
+</script>

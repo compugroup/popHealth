@@ -8,6 +8,7 @@ module Api
       description "This resource allows for the management of clinical quality measures in the popHealth application."
     end
     include PaginationHelper
+    include LogsHelper
     before_filter :authenticate_user!
     before_filter :validate_authorization!
     before_filter :set_pagination_params, :only=> :index
@@ -17,6 +18,7 @@ module Api
     api :GET, "/measures", "Get a list of measures"
     param_group :pagination, Api::PatientsController
     def index
+      log_api_call LogAction::VIEW, "View list of measures"
       measures = HealthDataStandards::CQM::Measure.where(@filter)
       render json: paginate(api_measures_url, measures), each_serializer: HealthDataStandards::CQM::MeasureSerializer
     end
@@ -25,6 +27,7 @@ module Api
     param :id, String, :desc => 'The HQMF id for the CQM to calculate', :required => true
     param :sub_id, String, :desc => 'The sub id for the CQM to calculate. This is popHealth specific.', :required => false
     def show
+      log_api_call LogAction::VIEW, "View measure"
       measure = HealthDataStandards::CQM::Measure.where({"hqmf_id" => params[:id], "sub_id"=>params[:sub_id]}).first
       render :json=> measure
     end
@@ -54,8 +57,10 @@ module Api
       else
         Measures::Loader.generate_measures(hqmf_document,params[:vsac_username],params[:vsac_password],measure_details)
       end
+      log_api_call LogAction::UPDATE, "Loaded measure"
       render json: ret_value
       rescue => e
+        log_api_call LogAction::UPDATE, "Failed to load measure, with error #{e.to_s}"
         render text: e.to_s, status: 500
     end
 
@@ -69,6 +74,7 @@ module Api
       HealthDataStandards::CQM::PatientCache.where({"value.measure_id" => params[:id]}).destroy
       HealthDataStandards::CQM::QueryCache.where({"measure_id" => params[:id]}).destroy
       measure.destroy
+      log_api_call LogAction::DELETE, "Remove measure"
       render :status=>204, :text=>""
     end
 
@@ -80,8 +86,10 @@ module Api
         m.update_attributes(params[:measure])
         m.save
       end
+      log_api_call LogAction::UPDATE, "Update measure metadata"
       render json:  measures,  each_serializer: HealthDataStandards::CQM::MeasureSerializer
       rescue => e
+        log_api_call LogAction::UPDATE, "Failed to update measure, with error #{e.to_s}"
         render text: e.to_s, status: 500
     end
 
@@ -96,8 +104,10 @@ module Api
        }
       Measures::Loader.finalize_measure(params[:hqmf_id],params[:vsac_username],params[:vsac_password],measure_details)
       measure = HealthDataStandards::CQM::Measure.where({hqmf_id: params[:hqmf_id]}).first
+      log_api_call LogAction::UPDATE, "Finalize measure"
       render json: measure, serializer: HealthDataStandards::CQM::MeasureSerializer
       rescue => e
+        log_api_call LogAction::UPDATE, "Failed to finalize measure, with error #{e.to_s}"
         render text: e.to_s, status: 500
     end
 

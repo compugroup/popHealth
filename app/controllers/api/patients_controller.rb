@@ -16,6 +16,7 @@ module Api
     include PaginationHelper
     include ApplicationHelper
     include PatientsHelper
+    include LogsHelper
     
     respond_to :json
     before_filter :authenticate_user!
@@ -35,6 +36,8 @@ module Api
     def index
       records = Record.where(@query)
       validate_record_authorizations(records)
+      
+      log_api_call LogAction::VIEW, "Patient list viewed", true
       render json: paginate(api_patients_url,records)
     end
 
@@ -60,9 +63,7 @@ module Api
       if results = json.delete('cache_results')
         json['measure_results'] = results_with_measure_metadata(results)
       end
-      Log.create(:username =>   current_user.username,
-                 :event =>      'patient record viewed',
-                 :medical_record_number => @patient.medical_record_number)
+      log_api_call LogAction::VIEW, 'Patient record viewed', true
       render :json => json
     end
 
@@ -79,9 +80,10 @@ module Api
       
       success = BulkRecordImporter.import(params[:file], {}, practice)
       if success
-        Log.create(:username => @current_user.username, :event => 'record import')
+        log_api_call LogAction::ADD, "Patient record import", true
         render status: 201, text: 'Patient Imported'
       else
+        log_api_call LogAction::ADD, "Patient record import failed", true
         render status: 500, text: 'Patient record did not save properly'
       end
     end
@@ -89,6 +91,7 @@ module Api
     def toggle_excluded
       # TODO - figure out security constraints around manual exclusions -- this should probably be built around
       # the security constraints for queries
+      log_api_call LogAction::UPDATE, "Toggle patient excluded", true
       ManualExclusion.toggle!(@patient, params[:measure_id], params[:sub_id], params[:rationale], current_user)
       redirect_to :controller => :measures, :action => :patients, :id => params[:measure_id], :sub_id => params[:sub_id]
     end
@@ -98,6 +101,7 @@ module Api
     def destroy
       authorize! :delete, @patient
       @patient.destroy
+      log_api_call LogAction::DELETE, "Removed patient", true
       render :status=> 204, text=> ""
     end
 
@@ -106,6 +110,7 @@ module Api
     param :id, String, :desc => "Patient ID", :required => true
     example '[{"DENOM":1.0,"NUMER":1.0,"DENEXCEP":0.0,"DENEX":0.0",measure_id":"40280381-3D61-56A7-013E-6224E2AC25F3","nqf_id":"0038","effective_date":1356998340.0,"measure_title":"Childhood Immunization Status",...},...]'
     def results
+      log_api_call LogAction::VIEW, "View patient quality measure results", true
       render :json=> results_with_measure_metadata(@patient.cache_results(params))
     end
 

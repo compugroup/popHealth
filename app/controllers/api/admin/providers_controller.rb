@@ -7,6 +7,7 @@ module Api
         formats ['json']
         description "This resource allows for administrative tasks to be performed on providers via the API."
       end
+      include LogsHelper
       before_filter :authenticate_user!
       before_filter :validate_authorization!
 
@@ -14,6 +15,7 @@ module Api
       formats ['json']
       example '{"provider_count":2}'
       def count
+        log_admin_api_call LogAction::VIEW, "Get count of providers"
         json = {}
         json['provider_count'] = Provider.count
         render :json => json
@@ -22,6 +24,7 @@ module Api
       api :POST, "/admin/providers", "Upload an opml file of providers."
       param :file, nil, :desc => 'The ompl file of providers to upload.', :required => true
       def create
+        log_admin_api_call LogAction::ADD, "Create providers from OPML"
         file = params[:file]
         FileUtils.mkdir_p(File.join(Dir.pwd, "tmp/import"))
         file_location = File.join(Dir.pwd, "tmp/import")
@@ -38,6 +41,7 @@ module Api
 
       api :DELETE, "/admin/providers", "Delete all providers in the database."
       def destroy
+        log_admin_api_call LogAction::DELETE, "Delete all providers"
         Provider.delete_all
         render status: 200, text: 'Provider records successfully removed from database.'
       end

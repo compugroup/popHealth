@@ -29,6 +29,13 @@ defaults: &defaults
   # use workaround for new measure bundle 2.6.0 to get measure results
   ignore_provider_performance_dates: true
   
+  # Specify the types of events that you would like to record in the log
+  log_to_database:
+    controller: false
+    admin: false
+    api: false
+    is_sensitive: true
+
   #provider type to exclude EH measures from
   eh_exclusion_type: "Division"
   orphan_provider:
@@ -89,12 +96,22 @@ development:
   idle_timeout_enabled: false
   default_user_staff_role: true
   patient_management_enabled: true
+  log_to_database:
+    controller: true
+    admin: true
+    api: true
+    is_sensitive: true
 
 test:
   <<: *defaults
   default_user_approved: false
   # we do not want to force unsecure when testing
   force_unsecure_communications: true
+  log_to_database:
+    controller: true
+    admin: true
+    api: true
+    is_sensitive: true
 
 production:
   <<: *defaults

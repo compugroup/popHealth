@@ -11,6 +11,8 @@ class LogsController < ApplicationController
     order = []
     if VALID_SORTABLE_COLUMNS.include?(params[:sort]) && VALID_SORT_ORDERS.include?(params[:order])
       order << [params[:sort].to_sym, params[:order].to_sym]
+      @sort_order = params[:order].to_sym
+      @sort_column = params[:sort].to_sym
     end
 
     # If no valid order is specified, order by date
